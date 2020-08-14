@@ -89,11 +89,11 @@ Mountain BuildMountain(const MountainOptions & options) {
 	for( size_t x = 0;
 	     x < options.GridSize;
 	     ++x ) {
-		auto xh = float(x) / float(options.GridSize);
+		auto xh = float(x) / float(options.GridSize) - 0.5;
 		for( size_t y = 0;
 		     y < options.GridSize;
 		     ++y ) {
-			auto yh = float(y) / float(options.GridSize);
+			auto yh = float(y) / float(options.GridSize) - 0.5;
 			hm(x,y) = std::max(xh,yh);
 		}
 	}

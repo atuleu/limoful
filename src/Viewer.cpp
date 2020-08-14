@@ -1,5 +1,6 @@
 #include "Viewer.hpp"
 
+#include <chrono>
 
 Viewer::Viewer(QWidget * parent)
 	: QGLViewer(parent)
@@ -92,6 +93,8 @@ void Viewer::setModel(const Model & model) {
 		std::cerr << "Not initialized" << std::endl;
 		return;
 	}
+	using clock = std::chrono::high_resolution_clock;
+	auto start = clock::now();
 
 	std::vector<GLfloat> vertices,normals,colors;
 	vertices.reserve(3*model.VertexIndices.size());
@@ -121,7 +124,9 @@ void Viewer::setModel(const Model & model) {
 
 
 	d_size = std::min(vertices.size(),normals.size());
-	std::cerr << d_size << " vertices" << " and " << d_size / 3  <<  " triangles" << std::endl;
+	std::chrono::duration<float,std::milli> ellapsed = clock::now() - start;
+	std::cerr << d_size << " vertices" << " and " << d_size / 3  <<  " triangles loaded in "
+	          << ellapsed.count() << "ms." << std::endl;
 }
 
 
