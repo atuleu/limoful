@@ -3,6 +3,8 @@
 #include <QGLFunctions>
 #include <qglviewer.h>
 
+#include <memory>
+
 struct Model {
 	std::vector<float>  Vertices;
 	std::vector<float>  Normals;
@@ -29,4 +31,7 @@ public:
 private :
 	GLuint d_vaoID,d_vboID,d_nboID,d_cboID;
 	size_t d_size;
+	bool   d_ready;
+	std::shared_ptr<Model> d_onLoad;
+
 };

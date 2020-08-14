@@ -3,7 +3,8 @@
 
 Viewer::Viewer(QWidget * parent)
 	: QGLViewer(parent)
-	, d_size(0) {
+	, d_size(0)
+	, d_ready(false) {
 }
 
 Viewer::~Viewer() {
@@ -66,24 +67,32 @@ void Viewer::init() {
 	glGenBuffers(1,&d_nboID);
 	glGenBuffers(1,&d_cboID);
 
-	setModel(Model::Cube());
 
 	camera()->setUpVector({0,0,1});
 
 	camera()->setViewDirection({1,1,-1});
-	setSceneRadius(2.0);
+	setSceneRadius(1.5);
 	showEntireScene();
 
+	d_ready = true;
+	if ( d_onLoad ) {
+		setModel(*d_onLoad);
+		d_onLoad.reset();
+	}
 }
 
 QString Viewer::helpString() const {
-
-
 
 }
 
 
 void Viewer::setModel(const Model & model) {
+	if ( d_ready == false ) {
+		d_onLoad = std::make_shared<Model>(model);
+		std::cerr << "Not initialized" << std::endl;
+		return;
+	}
+
 	std::vector<GLfloat> vertices,normals,colors;
 	vertices.reserve(3*model.VertexIndices.size());
 	normals.reserve(3*model.VertexIndices.size());
