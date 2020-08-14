@@ -67,6 +67,13 @@ void Viewer::init() {
 	glGenBuffers(1,&d_cboID);
 
 	setModel(Model::Cube());
+
+	camera()->setUpVector({0,0,1});
+
+	camera()->setViewDirection({1,1,-1});
+	setSceneRadius(2.0);
+	showEntireScene();
+
 }
 
 QString Viewer::helpString() const {
