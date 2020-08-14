@@ -7,11 +7,13 @@ set(SRC_FILES main.cpp
               MainWindow.cpp
               Viewer.cpp
               Curve.cpp
+              BuildMountain.cpp
               )
 
 set(HDR_FILES MainWindow.hpp
               Viewer.hpp
               Curve.hpp
+              BuildMountain.hpp
               )
 
 set(UI_FILES MainWindow.ui)

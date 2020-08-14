@@ -3,6 +3,7 @@
 #include <limits>
 #include <cmath>
 
+
 Curve Curve::Exp() {
 	Curve res;
 
