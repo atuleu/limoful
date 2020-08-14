@@ -3,14 +3,21 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 
-set(SRC_FILES main.cpp)
+set(SRC_FILES main.cpp
+              MainWindow.cpp
+              Viewer.cpp
+              )
 
-set(HDR_FILES )
+set(HDR_FILES MainWindow.hpp
+              Viewer.hpp
+              )
 
-set(UI_FILES )
+set(UI_FILES MainWindow.ui)
 
 set(RCC_FILES )
 
+include_directories(${PROJECT_BINARY_DIR}/src
+                    ${PROJECT_SOURCE_DIR}/src)
 
 add_executable(limoful ${SRC_FILES}
                        ${HDR_FILES}
@@ -19,4 +26,8 @@ add_executable(limoful ${SRC_FILES}
                        )
 
 target_link_libraries(limoful ${QGLVIEWER_LIBRARY}
-                              Qt5::Widgets)
+                              Qt5::Xml
+                              Qt5::Widgets
+                              Qt5::OpenGL
+                              -lGL
+                              )
