@@ -9,7 +9,7 @@ Curve Curve::Exp() {
 
 	for ( size_t i = 0; i <= 30; ++i ) {
 		float x = float(i) / 30.0;
-		res.d_data[1.0 - x] = std::exp(-4*x);
+		res.d_data[1.0-x] = std::exp(-4*x);
 	}
 	return res;
 }

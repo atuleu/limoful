@@ -36,4 +36,5 @@ target_link_libraries(limoful ${QGLVIEWER_LIBRARY}
                               Qt5::Widgets
                               Qt5::OpenGL
                               -lGL
+                              ${LIBNOISE_LIBRARY}
                               )

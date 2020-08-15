@@ -13,6 +13,14 @@ if(NOT QGLVIEWER_LIBRARY OR NOT QGLVIEWER_INCLUDE_DIR)
 	message(FATAL_ERROR "Could not find QGLViewer")
 endif(NOT QGLVIEWER_LIBRARY OR NOT QGLVIEWER_INCLUDE_DIR)
 
+find_path(LIBNOISE_INCLUDE_DIR libnoise/module/perlin.h)
+find_library(LIBNOISE_LIBRARY noise)
+
+
+if(NOT LIBNOISE_LIBRARY OR NOT LIBNOISE_INCLUDE_DIR)
+	message(FATAL_ERROR "Could not find libnoise")
+endif(NOT LIBNOISE_LIBRARY OR NOT LIBNOISE_INCLUDE_DIR)
+
 
 include(FetchContent)
 FetchContent_Declare(vcg
@@ -26,9 +34,10 @@ if(NOT googletest_POPULATED)
 endif(NOT googletest_POPULATED)
 
 
-
 include_directories(${QGLVIEWER_INCLUDE_DIR}/QGLViewer
                     ${vcg_SOURCE_DIR}
-                    ${vcg_SOURCE_DIR}/eigenlib)
+                    ${vcg_SOURCE_DIR}/eigenlib
+                    ${LIBNOISE_INCLUDE_DIR}
+                    )
 
 add_subdirectory(src)
