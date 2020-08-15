@@ -2,6 +2,8 @@
 
 #include <chrono>
 
+#include<vcg/complex/algorithms/create/platonic.h>
+
 Viewer::Viewer(QWidget * parent)
 	: QGLViewer(parent)
 	, d_size(0)
@@ -77,7 +79,7 @@ void Viewer::init() {
 
 	d_ready = true;
 	if ( d_onLoad ) {
-		setModel(*d_onLoad);
+		setMesh(d_onLoad);
 		d_onLoad.reset();
 	}
 }
@@ -87,31 +89,31 @@ QString Viewer::helpString() const {
 }
 
 
-void Viewer::setModel(const Model & model) {
+void Viewer::setMesh(const LIFMesh::Ptr & mesh) {
 	if ( d_ready == false ) {
-		d_onLoad = std::make_shared<Model>(model);
-		std::cerr << "Not initialized" << std::endl;
+		d_onLoad = mesh;
 		return;
 	}
 	using clock = std::chrono::high_resolution_clock;
 	auto start = clock::now();
 
 	std::vector<GLfloat> vertices,normals,colors;
-	vertices.reserve(3*model.VertexIndices.size());
-	normals.reserve(3*model.VertexIndices.size());
-	for ( const auto & vIdx : model.VertexIndices ) {
-		vertices.push_back(model.Vertices[3*vIdx + 0]);
-		vertices.push_back(model.Vertices[3*vIdx + 1]);
-		vertices.push_back(model.Vertices[3*vIdx + 2]);
-		colors.push_back(0.0);
-		colors.push_back(0.7f);
-		colors.push_back(0.7f);
-	}
-
-	for ( const auto & nIdx : model.NormalIndices ) {
-		normals.push_back(model.Normals[3*nIdx + 0]);
-		normals.push_back(model.Normals[3*nIdx + 1]);
-		normals.push_back(model.Normals[3*nIdx + 2]);
+	vertices.reserve(3*mesh->face.size());
+	normals.reserve(3*mesh->face.size());
+	for ( const auto & face : mesh->face ) {
+		const auto & n = face.cN();
+		for ( size_t i = 0; i < 3; ++i ) {
+			const auto & p = face.cP(i);
+			vertices.push_back(p[0]);
+			vertices.push_back(p[1]);
+			vertices.push_back(p[2]);
+			normals.push_back(n[0]);
+			normals.push_back(n[1]);
+			normals.push_back(n[2]);
+			colors.push_back(0);
+			colors.push_back(0.7);
+			colors.push_back(0.7);
+		}
 	}
 
 	glBindBuffer(GL_ARRAY_BUFFER,d_vboID);
@@ -127,45 +129,15 @@ void Viewer::setModel(const Model & model) {
 	std::chrono::duration<float,std::milli> ellapsed = clock::now() - start;
 	std::cerr << d_size << " vertices" << " and " << d_size / 3  <<  " triangles loaded in "
 	          << ellapsed.count() << "ms." << std::endl;
+
+	update();
 }
 
 
 
-Model Model::Cube() {
-	Model res;
-	res.Vertices = {
-	                1.0,1.0,1.0,
-	                1.0,-1.0,1.0,
-	                -1.0,-1.0,1.0,
-	                -1.0,1.0,1.0,
-	                1.0,1.0,-1.0,
-	                1.0,-1.0,-1.0,
-	                -1.0,-1.0,-1.0,
-	                -1.0,1.0,-1.0,
-	};
-	res.VertexIndices = {
-	                     0,1,2,2,0,3,
-	                     4,5,6,4,6,7,
-	                     0,1,5,4,5,0,
-	                     2,3,6,3,6,7,
-	                     0,3,4,3,4,7,
-	                     1,2,5,2,5,6
-	};
-
-	res.Normals = { 0,0,1,
-	                0,1,0,
-	                1,0,0,
-	                0,0,-1,
-	                0,-1,0,
-	                -1,0,0
-	};
-	res.NormalIndices = {
-	                     0,0,0,0,0,0,
-	                     3,3,3,3,3,3,
-	                     2,2,2,2,2,2,
-	                     5,5,5,5,5,5,
-	                     1,1,1,1,1,1,
-	                     4,4,4,4,4,4
-	};
-	return res;
+LIFMesh::Ptr LIFMesh::Dodecahedron() {
+	auto mesh = std::make_shared<LIFMesh>();
+	vcg::tri::Dodecahedron(*mesh);
+	vcg::tri::UpdateNormal<LIFMesh>::PerFaceNormalized(*mesh);
+	return mesh;
 }

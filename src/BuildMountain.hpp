@@ -7,9 +7,7 @@
 
 struct Mountain {
 	std::vector<QImage> Noises;
-	Model Maximum;
-	Model Minimum;
-	Model Mountain;
+	LIFMesh::Ptr Maximum,Minimum,Mountain;
 };
 
 
@@ -22,6 +20,7 @@ struct MountainOptions {
 	size_t GridSize;
 	size_t Seed;
 	std::vector<float> OctaveWeights;
+	double BallPivotingRadius,BallPivotingCluster,BallPivotingAngle;
 };
 
 
