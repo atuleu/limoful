@@ -27,6 +27,8 @@ private slots:
 
 	void loadSettings();
 	void saveSettings();
+
+	void on_actionExport_triggered();
 private:
 
 	Ui::MainWindow * d_ui;

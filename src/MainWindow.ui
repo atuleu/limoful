@@ -423,8 +423,20 @@
      <height>24</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuExport">
+    <property name="title">
+     <string>FIle</string>
+    </property>
+    <addaction name="actionExport"/>
+   </widget>
+   <addaction name="menuExport"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionExport">
+   <property name="text">
+    <string>Export</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>

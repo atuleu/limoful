@@ -29,15 +29,17 @@ FetchContent_Declare(vcg
                      )
 
 FetchContent_GetProperties(vcg)
-if(NOT googletest_POPULATED)
+if(NOT vcg_POPULATED)
 	FetchContent_Populate(vcg)
-endif(NOT googletest_POPULATED)
+endif(NOT vcg_POPULATED)
 
+find_package(CGAL COMPONENTS Core REQUIRED)
 
 include_directories(${QGLVIEWER_INCLUDE_DIR}/QGLViewer
                     ${vcg_SOURCE_DIR}
                     ${vcg_SOURCE_DIR}/eigenlib
                     ${LIBNOISE_INCLUDE_DIR}
+                    ${CGAL_INCLUDE_DIRS}
                     )
 
 add_subdirectory(src)

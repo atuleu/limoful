@@ -7,6 +7,7 @@
 #include <QSettings>
 
 #include <chrono>
+#include <fstream>
 
 MainWindow::MainWindow(QWidget *parent)
 	: QMainWindow(parent)
@@ -157,5 +158,23 @@ void MainWindow::update3DLayer() {
 		break;
 	default:
 		d_ui->viewer->setMesh(d_mountain.Mountain);
+	}
+}
+
+void MainWindow::on_actionExport_triggered() {
+	std::cerr << "coucou" << std::endl;
+	std::vector<Eigen::Vector3f> points;
+	points.reserve(2*d_mountain.Points.size() );
+
+	for ( const auto & p : d_mountain.Points) {
+		if ( p.z() < 0.0 ) { continue;}
+		points.push_back(p);
+		//		points.push_back(Eigen::Vector3f(p.x(),p.y(),0));
+	}
+
+	std::ofstream file("/tmp/moutain.xyz");
+	file << points.size() << std::endl;
+	for ( const auto & p : points ) {
+		file << p.x() << " " << p.y() << " " << p.z() << std::endl;
 	}
 }

@@ -6,32 +6,67 @@
 #include <vcg/complex/algorithms/create/ball_pivoting.h>
 #include <vcg/complex/algorithms/create/ball_pivoting.h>
 
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+#include <CGAL/Projection_traits_xy_3.h>
+#include <CGAL/Delaunay_triangulation_2.h>
+
+
 #include <Eigen/Dense>
 
 #include <libnoise/module/perlin.h>
 
+typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
+typedef CGAL::Projection_traits_xy_3<K>  Gt;
+typedef CGAL::Delaunay_triangulation_2<Gt> Delaunay;
+typedef K::Point_3   Point;
+
+LIFMesh::Ptr FromDelaunay(const Delaunay & dt) {
+	auto mesh = std::make_shared<LIFMesh>();
+	size_t i = 0;
+	for ( auto faceIter = dt.finite_faces_begin();
+	      faceIter != dt.finite_faces_end();
+	      ++faceIter) {
+		auto triangle = dt.triangle(faceIter);
+		vcg::tri::Allocator<LIFMesh>::AddVertex(*mesh,LIFMesh::CoordType(triangle[0].x(),
+		                                                                 triangle[0].y(),
+		                                                                 triangle[0].z()));
+
+		vcg::tri::Allocator<LIFMesh>::AddVertex(*mesh,LIFMesh::CoordType(triangle[1].x(),
+		                                                                 triangle[1].y(),
+		                                                                 triangle[1].z()));
+
+		vcg::tri::Allocator<LIFMesh>::AddVertex(*mesh,LIFMesh::CoordType(triangle[2].x(),
+		                                                                 triangle[2].y(),
+		                                                                 triangle[2].z()));
+
+
+		vcg::tri::Allocator<LIFMesh>::AddFace(*mesh,i,i+1,i+2);
+		i += 3;
+	}
+	vcg::tri::UpdateNormal<LIFMesh>::PerFaceNormalized(*mesh);
+	return mesh;
+}
 
 LIFMesh::Ptr BuildMesh(const std::vector<Eigen::Vector3f> & points,
                        double radius,
                        double clusterRatio,
-                       double angle) {
-	auto mesh = std::make_shared<LIFMesh>();
+                       double angle,
+                       bool clamp = false) {
+
+	std::vector<Point> cgalPoints;
 	// simply put all the points
 	for ( const auto & p : points ) {
-		if ( p.z() < 0.0 ) {
-			continue;
+		if ( clamp == true ) {
+			if ( p.z() < 0.0 ) {
+				continue;
+			}
 		}
-		vcg::tri::Allocator<LIFMesh>::AddVertex(*mesh,LIFMesh::CoordType(p.x(),p.y(),p.z()));
-		vcg::tri::Allocator<LIFMesh>::AddVertex(*mesh,LIFMesh::CoordType(p.x(),p.y(),0.0));
+		cgalPoints.push_back(Point(p.x(),p.y(),p.z()));
 	}
 
-	vcg::tri::BallPivoting<LIFMesh> pivot(*mesh,radius,clusterRatio,angle * M_PI/ 180.0);
-	pivot.BuildMesh();
-	vcg::tri::UpdateNormal<LIFMesh>::PerFaceNormalized(*mesh);
-	for ( auto & f : mesh->face ) {
-		//f.N() *= -1.0;
-	}
-	return mesh;
+	Delaunay dt(cgalPoints.begin(),cgalPoints.end());
+
+	return FromDelaunay(dt);
 }
 
 
@@ -107,10 +142,10 @@ public:
 
 	std::pair<float,float> MinAndMaxHeight(float length,float angle) {
 		const auto & [ lowCurve,highCurve,lowAngle,highAngle] = FindBoundingCurves(angle);
-		return {std::max(interpolate(lowCurve,lowAngle,d_minSlope,length,angle),
-		                 interpolate(highCurve,highAngle,d_minSlope,length,angle)),
-		        std::max(interpolate(lowCurve,lowAngle,d_maxSlope,length,angle),
-		                 interpolate(highCurve,highAngle,d_maxSlope,length,angle))};
+		return {std::max(interpolateMin(lowCurve,lowAngle,length,angle),
+		                 interpolateMin(highCurve,highAngle,length,angle)),
+		        std::max(interpolateMax(lowCurve,lowAngle,length,angle),
+		                 interpolateMax(highCurve,highAngle,length,angle))};
 	}
 
 private:
@@ -130,10 +165,17 @@ private:
 		return {&(ffi->second),&(fi->second),ffi->first,fi->first};
 	}
 
-	float interpolate(Curve * curve, float angleCurve,float slope, float length, float angle) {
+	float interpolateMax(Curve * curve, float angleCurve, float length, float angle) {
 		float distToCurve = std::fabs(angle - angleCurve) * length;
-		return curve->ValueAt(1.0-length) - std::tan(slope) * distToCurve;
+		return curve->ValueAt(1.0-length) - std::tan(d_minSlope) * distToCurve;
 	}
+
+	float interpolateMin(Curve * curve, float angleCurve, float length, float angle) {
+		float distToCurve = std::fabs(angle - angleCurve) * length;
+		float v = curve->ValueAt(1.0-length);
+		return std::max(v  - std::tan(d_maxSlope) * distToCurve,float(-0.1));
+	}
+
 
 	std::map<float,Curve> d_curves;
 	float d_minSlope,d_maxSlope;
@@ -163,6 +205,14 @@ std::vector<QImage> DrawNoise(size_t gridSize,
 	return res;
 }
 
+std::pair<size_t,size_t> PolarToImage(float length,float angle,size_t gridSize) {
+	float x = (length * std::cos(angle) + 1.0) /2.0;
+	float y = (length * std::sin(angle) + 1.0) /2.0;
+	return {std::min(size_t(x*gridSize),gridSize-1),
+	        std::min(size_t(y*gridSize),gridSize-1)};
+}
+
+
 Mountain BuildMountain(MountainOptions options) {
 	if ( options.Curves.size() < 2 ) {
 		options.Curves = {Curve::Exp(),Curve::Exp()};
@@ -171,20 +221,40 @@ Mountain BuildMountain(MountainOptions options) {
 
 	auto curves = FittedCurves(options);
 
+	double totalWeight = 0.0;
+	for ( const auto & w : options.OctaveWeights ) {
+		totalWeight += w;
+	}
+	for ( auto & w : options.OctaveWeights ) {
+		w /= totalWeight;
+	}
+
 	Mountain res;
 	res.Noises = DrawNoise(options.GridSize,
 	                       options.OctaveWeights.size(),
 	                       options.Seed);
 	res.Points = BuildPolarGrid(options.GridSize);
 	std::vector<Eigen::Vector3f> maximumHeight,minimumHeight;
+	float maxZ(-3000),minZ(3000);
 	for ( auto & p : res.Points ) {
-		p.z() = options.Curves.front().ValueAt(1.0-p.x());
-
-		auto [maxHeight,minHeight] = curves.MinAndMaxHeight(p.x(),p.y());
+		auto [minHeight,maxHeight] = curves.MinAndMaxHeight(p.x(),p.y());
 
 		maximumHeight.push_back(Eigen::Vector3f(p.x(),p.y(),maxHeight));
 		minimumHeight.push_back(Eigen::Vector3f(p.x(),p.y(),minHeight));
+
+		//compute noise
+		auto [x,y] = PolarToImage(p.x(),p.y(),options.GridSize);
+		float noise = 0.0;
+		for ( size_t i = 0; i < options.OctaveWeights.size(); ++i ) {
+			noise += options.OctaveWeights[i] * float(qGray(res.Noises[i].pixel(x,y)))/255.0;
+		}
+
+		p.z() = minHeight + (maxHeight - minHeight) * noise;
+		minZ = std::min(noise,minZ);
+		maxZ = std::max(noise,maxZ);
+
 	}
+	std::cerr << "min Noise: " << minZ << " max Noise: " << maxZ << std::endl;
 
 	PolarToCartesian(res.Points);
 	PolarToCartesian(maximumHeight);
@@ -193,7 +263,8 @@ Mountain BuildMountain(MountainOptions options) {
 	res.Mountain = BuildMesh(res.Points,
 	                         options.BallPivotingRadius,
 	                         options.BallPivotingCluster,
-	                         options.BallPivotingAngle);
+	                         options.BallPivotingAngle,
+	                         true);
 
 	res.Maximum =  BuildMesh(maximumHeight,
 	                         options.BallPivotingRadius,
