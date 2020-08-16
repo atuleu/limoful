@@ -19,7 +19,8 @@ public:
 	FittedCurves(const MountainOptions & options)
 		: d_minSlope(M_PI / 180.0 * options.SlopeMinAngle)
 		, d_maxSlope(M_PI / 180.0 * options.SlopeMaxAngle)
-		, d_jump(options.EdgeJump){
+		, d_jump(options.EdgeJump)
+		, d_minValue(options.LowMin) {
 		if ( d_maxSlope < d_minSlope) {
 			std::swap(d_minSlope,d_maxSlope);
 		}
@@ -90,7 +91,7 @@ private:
 		if ( distAngle < 1e-6 ) {
 			return {distToCurve,v};
 		}
-		return {distToCurve,std::max(v + d_jump - std::tan(d_maxSlope) * distToCurve,float(-0.1))};
+		return {distToCurve,std::max(v + d_jump - std::tan(d_maxSlope) * distToCurve,d_minValue)};
 	}
 
 	float mix(std::pair<float,float> a,
@@ -103,7 +104,7 @@ private:
 
 
 	std::map<float,Curve> d_curves;
-	float d_minSlope,d_maxSlope,d_jump;
+	float d_minSlope,d_maxSlope,d_jump,d_minValue;
 };
 
 
@@ -137,11 +138,11 @@ std::pair<size_t,size_t> PolarToImage(float length,float angle,size_t gridSize) 
 	        std::min(size_t(y*gridSize),gridSize-1)};
 }
 
-void RemovePointsBelow0(std::vector<Eigen::Vector3f> & points) {
+void RemovePointsBelow(std::vector<Eigen::Vector3f> & points,float value) {
 	points.erase(std::remove_if(points.begin(),
 	                            points.end(),
-	                            [](const Eigen::Vector3f & p) {
-		                            return p.z() < 0;
+	                            [value](const Eigen::Vector3f & p) {
+		                            return p.z() < value;
 	                            }),
 	             points.end());
 }
@@ -194,7 +195,7 @@ Mountain BuildMountain(MountainOptions options) {
 	}
 	std::cerr << "min Noise: " << minZ << " max Noise: " << maxZ << std::endl;
 
-	RemovePointsBelow0(res.Points);
+	RemovePointsBelow(res.Points,options.BaseCut);
 	PolarGrid::ToCartesian(res.Points);
 	PolarGrid::ToCartesian(maximumHeight);
 	PolarGrid::ToCartesian(minimumHeight);

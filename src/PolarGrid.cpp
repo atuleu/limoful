@@ -11,11 +11,16 @@ std::vector<Eigen::Vector3f> PolarGrid::Build(size_t gridSize) {
 	float lengthIncrement = 2.0 / (gridSize - 1);
 
 	std::vector<Eigen::Vector3f> grid = { Eigen::Vector3f(0,0,0) };
-	std::vector<float> lastAngles((gridSize-1)/2,0.0);
+	std::vector<float> lastAngles((gridSize-1),0.0);
 	for ( size_t angleIdx = 0; angleIdx < gridSize; ++angleIdx ) {
 		float angle = angleIdx * angleIncrement;
-		for ( size_t lengthIdx = 1; lengthIdx <= (gridSize - 1) / 2; ++lengthIdx) {
+		auto c = std::fabs(std::cos(angle));
+		auto s = std::fabs(std::sin(angle));
+		for ( size_t lengthIdx = 1; lengthIdx <= (gridSize - 1) ; ++lengthIdx) {
 			float length = lengthIdx * lengthIncrement;
+			if (c*length > 1.0 || s*length > 1.0 ) {
+				continue;
+			}
 			if ( angleIdx == 0 ) {
 				grid.push_back(Eigen::Vector3f(length,angle,0.0));
 				continue;
