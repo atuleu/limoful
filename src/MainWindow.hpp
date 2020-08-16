@@ -22,7 +22,8 @@ protected:
 
 private slots:
 	void update3DLayer();
-	void updateModel();
+	void updateModelHigh();
+	void updateModelLow();
 	void enableBuild();
 
 	void loadSettings();
@@ -30,6 +31,7 @@ private slots:
 
 	void on_actionExport_triggered();
 private:
+	void buildModel(size_t gridSize);
 
 	Ui::MainWindow * d_ui;
 

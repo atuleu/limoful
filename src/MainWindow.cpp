@@ -42,13 +42,15 @@ MainWindow::MainWindow(QWidget *parent)
 	        this,&MainWindow::enableBuild);
 
 	connect(d_ui->gridSizeBox,static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged),
-	        this,&MainWindow::enableBuild);
+	        this,[this]() {
+		             d_ui->buildButton->setEnabled(true);
+	             });
 
 	connect(d_ui->mSeedBox,static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged),
 	        this,&MainWindow::enableBuild);
 
 	connect(d_ui->buildButton,&QPushButton::clicked,
-	        this,&MainWindow::updateModel);
+	        this,&MainWindow::updateModelHigh);
 
 	for ( const auto & s : d_octavesSliders ) {
 		connect(s,&QAbstractSlider::valueChanged,
@@ -59,7 +61,7 @@ MainWindow::MainWindow(QWidget *parent)
 	        this,&MainWindow::update3DLayer);
 
 
-	updateModel();
+	updateModelLow();
 }
 
 MainWindow::~MainWindow() {
@@ -68,10 +70,13 @@ MainWindow::~MainWindow() {
 
 void MainWindow::enableBuild() {
 	d_ui->buildButton->setEnabled(true);
+	updateModelLow();
 }
 
-void MainWindow::updateModel() {
+void MainWindow::buildModel(size_t gridSize) {
 	MountainOptions opts;
+	opts.GridSize = gridSize;
+
 	opts.Curves = {Curve::Exp(),Curve::Exp(),Curve::Exp()};
 	opts.Angles = {0.0,120.0,240.0};
 
@@ -82,10 +87,6 @@ void MainWindow::updateModel() {
 	opts.SlopeMinAngle = d_ui->mMinSlopeBox->value();
 	opts.SlopeMaxAngle = d_ui->mMaxSlopeBox->value();
 
-	opts.GridSize = d_ui->gridSizeBox->value();
-	opts.BallPivotingRadius = d_ui->bpRadiusBox->value() ;
-	opts.BallPivotingCluster = d_ui->bpClusterBox->value();
-	opts.BallPivotingAngle = d_ui->bpAngleBox->value();
 	using clock = std::chrono::high_resolution_clock;
 	auto start = clock::now();
 	d_mountain = BuildMountain(opts);
@@ -105,9 +106,6 @@ void MainWindow::updateModel() {
 		l->setPixmap(p);
 
 	}
-
-
-	d_ui->buildButton->setEnabled(false);
 }
 
 
@@ -177,4 +175,12 @@ void MainWindow::on_actionExport_triggered() {
 	for ( const auto & p : points ) {
 		file << p.x() << " " << p.y() << " " << p.z() << std::endl;
 	}
+}
+
+
+void MainWindow::updateModelHigh() {
+	buildModel(d_ui->gridSizeBox->value());
+}
+void MainWindow::updateModelLow() {
+	buildModel(100);
 }
