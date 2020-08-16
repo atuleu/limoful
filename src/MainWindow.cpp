@@ -26,15 +26,6 @@ MainWindow::MainWindow(QWidget *parent)
 
 	loadSettings();
 
-	connect(d_ui->bpRadiusBox,static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
-	        this,&MainWindow::enableBuild);
-
-	connect(d_ui->bpClusterBox,static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
-	        this,&MainWindow::enableBuild);
-
-	connect(d_ui->bpAngleBox,static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
-	        this,&MainWindow::enableBuild);
-
 	connect(d_ui->mMinSlopeBox,static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
 	        this,&MainWindow::enableBuild);
 
@@ -118,9 +109,6 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 void MainWindow::saveSettings() {
 	QSettings settings;
 	settings.setValue("gridSize",d_ui->gridSizeBox->value());
-	settings.setValue("bp/radius",d_ui->bpRadiusBox->value());
-	settings.setValue("bp/cluster",d_ui->bpClusterBox->value());
-	settings.setValue("bp/angle",d_ui->bpAngleBox->value());
 	settings.setValue("m/minSlope",d_ui->mMinSlopeBox->value());
 	settings.setValue("m/maxSlope",d_ui->mMaxSlopeBox->value());
 	settings.setValue("m/seed",d_ui->mSeedBox->value());
@@ -134,9 +122,6 @@ void MainWindow::loadSettings() {
 	d_ui->gridSizeBox->setValue(settings.value("gridSize",30).toInt());
 	d_ui->mMinSlopeBox->setValue(settings.value("m/minSlope",5.0).toDouble());
 	d_ui->mMaxSlopeBox->setValue(settings.value("m/maxSlope",40.0).toDouble());
-	d_ui->bpRadiusBox->setValue(settings.value("bp/radius",0.07).toDouble());
-	d_ui->bpClusterBox->setValue(settings.value("bp/cluster",0.2).toDouble());
-	d_ui->bpAngleBox->setValue(settings.value("bp/angle",90.0).toDouble());
 	d_ui->mSeedBox->setValue(settings.value("m/seed",42).toInt());
 	d_ui->mOctave1Slider->setValue(settings.value("m/octave1",90).toInt());
 	d_ui->mOctave2Slider->setValue(settings.value("m/octave2",40).toInt());
