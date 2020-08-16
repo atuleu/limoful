@@ -24,7 +24,7 @@ set(HDR_FILES MainWindow.hpp
 
 set(UI_FILES MainWindow.ui)
 
-set(RCC_FILES )
+set(RCC_FILES curves.qrc)
 
 include_directories(${PROJECT_BINARY_DIR}/src
                     ${PROJECT_SOURCE_DIR}/src)
