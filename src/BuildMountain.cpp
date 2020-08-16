@@ -112,7 +112,7 @@ std::vector<QImage> DrawNoise(size_t gridSize,
                               size_t seed) {
 	std::vector<QImage> res;
 	noise::module::Perlin n;
-	float octave = 2.0;
+	float octave = 1.0;
 	for ( size_t i = 0; i < nbOctaves; ++i) {
 		QImage image(gridSize,gridSize,QImage::Format_Grayscale8);
 		for ( size_t x = 0; x < gridSize; ++x) {

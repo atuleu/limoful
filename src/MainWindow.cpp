@@ -47,6 +47,9 @@ MainWindow::MainWindow(QWidget *parent)
 	connect(d_ui->mMaxSlopeBox,static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
 	        this,&MainWindow::enableBuild);
 
+	connect(d_ui->mJumpBox,static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
+	        this,&MainWindow::enableBuild);
+
 	connect(d_ui->gridSizeBox,static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged),
 	        this,[this]() {
 		             d_ui->buildButton->setEnabled(true);
@@ -100,7 +103,7 @@ void MainWindow::buildModel(size_t gridSize) {
 	opts.Seed = d_ui->mSeedBox->value();
 	opts.SlopeMinAngle = d_ui->mMinSlopeBox->value();
 	opts.SlopeMaxAngle = d_ui->mMaxSlopeBox->value();
-	opts.EdgeJump = -0.1;
+	opts.EdgeJump = d_ui->mJumpBox->value();
 
 
 	using clock = std::chrono::high_resolution_clock;
@@ -135,6 +138,7 @@ void MainWindow::saveSettings() {
 	settings.setValue("gridSize",d_ui->gridSizeBox->value());
 	settings.setValue("m/minSlope",d_ui->mMinSlopeBox->value());
 	settings.setValue("m/maxSlope",d_ui->mMaxSlopeBox->value());
+	settings.setValue("m/edgeJump",d_ui->mJumpBox->value());
 	settings.setValue("m/seed",d_ui->mSeedBox->value());
 	for ( size_t i = 0; i < d_octavesSliders.size(); ++i ) {
 		settings.setValue(QString("m/octave%1").arg(i+1),d_octavesSliders[i]->value());
@@ -154,6 +158,7 @@ void MainWindow::loadSettings() {
 	d_ui->gridSizeBox->setValue(settings.value("gridSize",30).toInt());
 	d_ui->mMinSlopeBox->setValue(settings.value("m/minSlope",5.0).toDouble());
 	d_ui->mMaxSlopeBox->setValue(settings.value("m/maxSlope",40.0).toDouble());
+	d_ui->mJumpBox->setValue(settings.value("m/edgeJump",-0.01).toDouble());
 	d_ui->mSeedBox->setValue(settings.value("m/seed",42).toInt());
 	d_ui->mOctave1Slider->setValue(settings.value("m/octave1",90).toInt());
 	d_ui->mOctave2Slider->setValue(settings.value("m/octave2",40).toInt());

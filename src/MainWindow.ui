@@ -30,7 +30,7 @@
        <property name="geometry">
         <rect>
          <x>0</x>
-         <y>-297</y>
+         <y>-335</y>
          <width>435</width>
          <height>642</height>
         </rect>
@@ -249,6 +249,9 @@
            </item>
            <item row="10" column="1">
             <widget class="QDoubleSpinBox" name="mJumpBox">
+             <property name="decimals">
+              <number>6</number>
+             </property>
              <property name="minimum">
               <double>-0.200000000000000</double>
              </property>
