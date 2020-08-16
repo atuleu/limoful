@@ -138,13 +138,34 @@ std::pair<size_t,size_t> PolarToImage(float length,float angle,size_t gridSize) 
 	        std::min(size_t(y*gridSize),gridSize-1)};
 }
 
-void RemovePointsBelow(std::vector<Eigen::Vector3f> & points,float value) {
-	points.erase(std::remove_if(points.begin(),
-	                            points.end(),
-	                            [value](const Eigen::Vector3f & p) {
-		                            return p.z() < value;
-	                            }),
-	             points.end());
+std::pair<PolarGrid::Grid,
+          std::vector<size_t> > RemovePointsBelow(const PolarGrid::Grid & points,
+                                                  PolarGrid::RayMap rays,
+                                                  float value) {
+	// cut each ray at value
+	for ( auto & [angle,indexes] : rays ) {
+		size_t newSize = 0;
+		for ( const auto & idx : indexes ) {
+			const auto & p = points[idx];
+			if ( p.z() < value ) {
+				indexes.resize(newSize);
+				break;
+			} else {
+				++newSize;
+			}
+		}
+	}
+	PolarGrid::Grid res = {points[0]};
+	std::vector<size_t> boundary;
+	for ( const auto & [angle,indexes] : rays ) {
+		for ( const auto & idx : indexes ) {
+			res.push_back(points[idx]);
+		}
+		if ( indexes.empty() == false ) {
+			boundary.push_back(indexes.back());
+		}
+	}
+	return {res,boundary};
 }
 
 Mountain BuildMountain(MountainOptions options) {
@@ -172,7 +193,8 @@ Mountain BuildMountain(MountainOptions options) {
 	res.Noises = DrawNoise(options.GridSize,
 	                       options.OctaveWeights.size(),
 	                       options.Seed);
-	res.Points = PolarGrid::Build(options.GridSize);
+	auto [points,rays] = PolarGrid::Build(options.GridSize);
+	res.Points = points;
 	std::vector<Eigen::Vector3f> maximumHeight,minimumHeight;
 	float maxZ(-3000),minZ(3000);
 	for ( auto & p : res.Points ) {
@@ -194,13 +216,13 @@ Mountain BuildMountain(MountainOptions options) {
 
 	}
 	std::cerr << "min Noise: " << minZ << " max Noise: " << maxZ << std::endl;
-
-	RemovePointsBelow(res.Points,options.BaseCut);
+	auto [newPoints,boundaries] = RemovePointsBelow(res.Points,rays,options.BaseCut);
+	res.Points = newPoints;
 	PolarGrid::ToCartesian(res.Points);
 	PolarGrid::ToCartesian(maximumHeight);
 	PolarGrid::ToCartesian(minimumHeight);
 
-	Meshifier mountainMeshifier(res.Points);
+	Meshifier mountainMeshifier(res.Points,boundaries);
 	Meshifier enveloppeMeshifier(maximumHeight);
 
 

@@ -4,7 +4,8 @@
 
 class Meshifier {
 public:
-	Meshifier(const std::vector<Eigen::Vector3f> & points);
+	Meshifier(const std::vector<Eigen::Vector3f> & points,
+	          std::vector<size_t> boundary = {});
 
 	LIFMesh::Ptr BuildTopMesh(const std::vector<Eigen::Vector3f> & points);
 

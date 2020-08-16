@@ -1,11 +1,16 @@
 #include "PolarGrid.hpp"
 
 
-std::vector<Eigen::Vector3f> PolarGrid::Build(size_t gridSize) {
+std::pair<PolarGrid::Grid,
+          PolarGrid::RayMap> PolarGrid::Build(size_t gridSize) {
+
 	gridSize = ActualGridSize(gridSize);
 	if ( gridSize < 2 ) {
-		return {};
+		return {{},{}};
 	}
+
+	RayMap rays;
+
 
 	float angleIncrement = AngleIncrement(gridSize);
 	float lengthIncrement = 2.0 / (gridSize - 1);
@@ -22,6 +27,7 @@ std::vector<Eigen::Vector3f> PolarGrid::Build(size_t gridSize) {
 				continue;
 			}
 			if ( angleIdx == 0 ) {
+				rays[angle].push_back(grid.size());
 				grid.push_back(Eigen::Vector3f(length,angle,0.0));
 				continue;
 			}
@@ -29,11 +35,12 @@ std::vector<Eigen::Vector3f> PolarGrid::Build(size_t gridSize) {
 				continue;
 			}
 			lastAngles[lengthIdx-1] = angle;
+			rays[angle].push_back(grid.size());
 			grid.push_back(Eigen::Vector3f(length,angle,0.0));
 		}
 	}
 
-	return grid;
+	return {grid,rays};
 }
 
 

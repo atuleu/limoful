@@ -3,40 +3,74 @@
 #include <vcg/complex/algorithms/update/normal.h>
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Projection_traits_xy_3.h>
 #include <CGAL/Delaunay_triangulation_2.h>
+#include <CGAL/Constrained_Delaunay_triangulation_2.h>
 #include <CGAL/Triangulation_vertex_base_with_info_2.h>
 
 
-Meshifier::Meshifier(const std::vector<Eigen::Vector3f> & points) {
+Meshifier::Meshifier(const std::vector<Eigen::Vector3f> & points,
+                     std::vector<size_t> boundary) {
 	typedef CGAL::Exact_predicates_inexact_constructions_kernel    K;
 	typedef CGAL::Triangulation_vertex_base_with_info_2<size_t, K> Vb;
-	typedef CGAL::Triangulation_data_structure_2<Vb>               Tds;
-	typedef CGAL::Delaunay_triangulation_2<K,Tds>                  Delaunay;
+	typedef CGAL::Constrained_triangulation_face_base_2<K>         Fb;
+	typedef CGAL::Triangulation_data_structure_2<Vb,Fb>            Tds;
+	typedef CGAL::Exact_predicates_tag                             Itag;
+	typedef CGAL::Constrained_Delaunay_triangulation_2<K,Tds,Itag> CDelaunay;
 	typedef K::Point_2                                             Point2;
 
-	std::vector<std::pair<Point2,size_t>> pointDTs;
-	pointDTs.reserve(points.size());
-	size_t i = -1;
-	for ( const auto & p : points ) {
-		pointDTs.push_back(std::make_pair(Point2(p.x(),p.y()),
-		                                  ++i));
+
+	std::set<size_t> bSet(boundary.begin(),boundary.end());
+	CDelaunay cdt;
+
+	for ( auto bIter = boundary.begin();
+	      bIter != boundary.end();
+	      ++bIter) {
+		size_t aIdx(*bIter),bIdx(boundary.front());
+
+		if ( bIter + 1 == boundary.cend() ) {
+			break;
+		}
+		bIdx = *(bIter+1);
+
+		const auto & a = points[aIdx];
+		const auto & b = points[bIdx];
+
+		auto ah = cdt.insert(Point2(a.x(),a.y()));
+		ah->info() = aIdx;
+
+		auto bh = cdt.insert(Point2(b.x(),b.y()));
+		bh->info() = bIdx;
+
+		cdt.insert_constraint(ah,bh);
 	}
 
-	Delaunay dt;
-	dt.insert(pointDTs.begin(),pointDTs.end());
+	size_t i = -1;
+	for ( const auto & p : points ) {
+		++i;
+		if ( bSet.count(i) != 0 ) {
+			continue;
+		};
+		auto vh = cdt.insert(Point2(p.x(),p.y()));
+		vh->info() = i;
+	}
+
 	d_faces.clear();
-	for ( auto faceIter = dt.finite_faces_begin();
-	      faceIter != dt.finite_faces_end();
+	for ( auto faceIter = cdt.finite_faces_begin();
+	      faceIter != cdt.finite_faces_end();
 	      ++faceIter ) {
+		if ( faceIter->vertex(0)->info() >= points.size()
+		     || faceIter->vertex(1)->info() >= points.size()
+		     || faceIter->vertex(2)->info() >= points.size() ) {
+			std::cerr << "Fuck you " << std::endl;
+			continue;
+		}
 		d_faces.push_back({faceIter->vertex(0)->info(),
 		                   faceIter->vertex(1)->info(),
 		                   faceIter->vertex(2)->info()});
 
 	}
 
-
-	auto vIter = dt.incident_vertices(dt.infinite_vertex());
+	auto vIter = cdt.incident_vertices(cdt.infinite_vertex());
 	auto end = vIter;
 	do {
 		d_boundary.push_back(vIter->info());
