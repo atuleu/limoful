@@ -137,6 +137,14 @@ void MainWindow::saveSettings() {
 	for ( size_t i = 0; i < d_octavesSliders.size(); ++i ) {
 		settings.setValue(QString("m/octave%1").arg(i+1),d_octavesSliders[i]->value());
 	}
+	settings.setValue("c/count",d_curves->rowCount());
+	for ( size_t i = 0; i < d_curves->rowCount(); ++i ) {
+		auto name = d_curves->item(i,0)->text();
+		auto angle = d_curves->item(i,1)->text().toDouble();
+		settings.setValue(QString("c/%1/name").arg(i),name);
+		settings.setValue(QString("c/%1/angle").arg(i),angle);
+	}
+
 }
 
 void MainWindow::loadSettings() {
@@ -149,6 +157,12 @@ void MainWindow::loadSettings() {
 	d_ui->mOctave2Slider->setValue(settings.value("m/octave2",40).toInt());
 	d_ui->mOctave3Slider->setValue(settings.value("m/octave3",20).toInt());
 	d_ui->mOctave4Slider->setValue(settings.value("m/octave4",10).toInt());
+
+	for ( int i = 0; i < settings.value("c/count",0).toInt(); ++i ) {
+		addCurve(settings.value(QString("c/%1/name").arg(i),"exp").toString(),
+		         settings.value(QString("c/%1/angle").arg(i),0.0).toDouble());
+	}
+
 }
 
 void MainWindow::update3DLayer() {
