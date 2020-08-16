@@ -2,116 +2,15 @@
 
 #include <vcg/complex/complex.h>
 #include <vcg/complex/algorithms/update/bounding.h>
-#include <vcg/complex/algorithms/update/normal.h>
 #include <vcg/complex/algorithms/create/ball_pivoting.h>
 #include <vcg/complex/algorithms/create/ball_pivoting.h>
-
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Projection_traits_xy_3.h>
-#include <CGAL/Delaunay_triangulation_2.h>
-
 
 #include <Eigen/Dense>
 
 #include <libnoise/module/perlin.h>
 
-typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
-typedef CGAL::Projection_traits_xy_3<K>  Gt;
-typedef CGAL::Delaunay_triangulation_2<Gt> Delaunay;
-typedef K::Point_3   Point;
-
-LIFMesh::Ptr FromDelaunay(const Delaunay & dt) {
-	auto mesh = std::make_shared<LIFMesh>();
-	size_t i = 0;
-	for ( auto faceIter = dt.finite_faces_begin();
-	      faceIter != dt.finite_faces_end();
-	      ++faceIter) {
-		auto triangle = dt.triangle(faceIter);
-		vcg::tri::Allocator<LIFMesh>::AddVertex(*mesh,LIFMesh::CoordType(triangle[0].x(),
-		                                                                 triangle[0].y(),
-		                                                                 triangle[0].z()));
-
-		vcg::tri::Allocator<LIFMesh>::AddVertex(*mesh,LIFMesh::CoordType(triangle[1].x(),
-		                                                                 triangle[1].y(),
-		                                                                 triangle[1].z()));
-
-		vcg::tri::Allocator<LIFMesh>::AddVertex(*mesh,LIFMesh::CoordType(triangle[2].x(),
-		                                                                 triangle[2].y(),
-		                                                                 triangle[2].z()));
-
-
-		vcg::tri::Allocator<LIFMesh>::AddFace(*mesh,i,i+1,i+2);
-		i += 3;
-	}
-	vcg::tri::UpdateNormal<LIFMesh>::PerFaceNormalized(*mesh);
-	return mesh;
-}
-
-LIFMesh::Ptr BuildMesh(const std::vector<Eigen::Vector3f> & points,
-                       double radius,
-                       double clusterRatio,
-                       double angle,
-                       bool clamp = false) {
-
-	std::vector<Point> cgalPoints;
-	// simply put all the points
-	for ( const auto & p : points ) {
-		if ( clamp == true ) {
-			if ( p.z() < 0.0 ) {
-				continue;
-			}
-		}
-		cgalPoints.push_back(Point(p.x(),p.y(),p.z()));
-	}
-
-	Delaunay dt(cgalPoints.begin(),cgalPoints.end());
-
-	return FromDelaunay(dt);
-}
-
-
-float AngleIncrement(size_t gridSize) {
-	return 2.0 * M_PI / (gridSize - 1);
-}
-
-std::vector<Eigen::Vector3f> BuildPolarGrid(size_t gridSize) {
-	if ( gridSize % 2 == 0 ) {
-		gridSize += 1;
-	}
-	if ( gridSize < 2 ) {
-		return {};
-	}
-
-	float angleIncrement = AngleIncrement(gridSize);
-	float lengthIncrement = 2.0 / (gridSize - 1);
-
-	std::vector<Eigen::Vector3f> grid = { Eigen::Vector3f(0,0,0) };
-	std::vector<float> lastAngles((gridSize-1)/2,0.0);
-	for ( size_t angleIdx = 0; angleIdx < gridSize; ++angleIdx ) {
-		float angle = angleIdx * angleIncrement;
-		for ( size_t lengthIdx = 1; lengthIdx <= (gridSize - 1) / 2; ++lengthIdx) {
-			float length = lengthIdx * lengthIncrement;
-			if ( angleIdx == 0 ) {
-				grid.push_back(Eigen::Vector3f(length,angle,0.0));
-				continue;
-			}
-			if ( (angle - lastAngles[lengthIdx-1]) * length < lengthIncrement ) {
-				continue;
-			}
-			lastAngles[lengthIdx-1] = angle;
-			grid.push_back(Eigen::Vector3f(length,angle,0.0));
-		}
-	}
-	return grid;
-}
-
-void PolarToCartesian(std::vector<Eigen::Vector3f> & points ) {
-	for ( auto & p : points ) {
-		p = Eigen::Vector3f(p.x() * std::cos(p.y()),
-		                    p.x() * std::sin(p.y()),
-		                    p.z());
-	}
-}
+#include "PolarGrid.hpp"
+#include "Meshifier.hpp"
 
 class FittedCurves {
 public:
@@ -122,7 +21,7 @@ public:
 			std::swap(d_minSlope,d_maxSlope);
 		}
 
-		float angleIncrement = AngleIncrement(options.GridSize);
+		float angleIncrement = PolarGrid::AngleIncrement(options.GridSize);
 
 		size_t i = 0;
 		for ( const auto & angle : options.Angles ) {
@@ -212,6 +111,14 @@ std::pair<size_t,size_t> PolarToImage(float length,float angle,size_t gridSize) 
 	        std::min(size_t(y*gridSize),gridSize-1)};
 }
 
+void RemovePointsBelow0(std::vector<Eigen::Vector3f> & points) {
+	points.erase(std::remove_if(points.begin(),
+	                            points.end(),
+	                            [](const Eigen::Vector3f & p) {
+		                            return p.z() < 0;
+	                            }),
+	             points.end());
+}
 
 Mountain BuildMountain(MountainOptions options) {
 	if ( options.Curves.size() < 2 ) {
@@ -233,7 +140,7 @@ Mountain BuildMountain(MountainOptions options) {
 	res.Noises = DrawNoise(options.GridSize,
 	                       options.OctaveWeights.size(),
 	                       options.Seed);
-	res.Points = BuildPolarGrid(options.GridSize);
+	res.Points = PolarGrid::Build(options.GridSize);
 	std::vector<Eigen::Vector3f> maximumHeight,minimumHeight;
 	float maxZ(-3000),minZ(3000);
 	for ( auto & p : res.Points ) {
@@ -256,25 +163,18 @@ Mountain BuildMountain(MountainOptions options) {
 	}
 	std::cerr << "min Noise: " << minZ << " max Noise: " << maxZ << std::endl;
 
-	PolarToCartesian(res.Points);
-	PolarToCartesian(maximumHeight);
-	PolarToCartesian(minimumHeight);
+	RemovePointsBelow0(res.Points);
+	PolarGrid::ToCartesian(res.Points);
+	PolarGrid::ToCartesian(maximumHeight);
+	PolarGrid::ToCartesian(minimumHeight);
 
-	res.Mountain = BuildMesh(res.Points,
-	                         options.BallPivotingRadius,
-	                         options.BallPivotingCluster,
-	                         options.BallPivotingAngle,
-	                         true);
+	Meshifier mountainMeshifier(res.Points);
+	Meshifier enveloppeMeshifier(maximumHeight);
 
-	res.Maximum =  BuildMesh(maximumHeight,
-	                         options.BallPivotingRadius,
-	                         options.BallPivotingCluster,
-	                         options.BallPivotingAngle);
 
-	res.Minimum =  BuildMesh(minimumHeight,
-	                         options.BallPivotingRadius,
-	                         options.BallPivotingCluster,
-	                         options.BallPivotingAngle);
+	res.Mountain = mountainMeshifier.BuildCompleteMesh(res.Points);
 
+	res.Maximum =  enveloppeMeshifier.BuildTopMesh(maximumHeight);
+	res.Minimum =  enveloppeMeshifier.BuildTopMesh(minimumHeight);
 	return res;
 }

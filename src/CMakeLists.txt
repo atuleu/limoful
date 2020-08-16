@@ -10,12 +10,16 @@ set(SRC_FILES main.cpp
               Viewer.cpp
               Curve.cpp
               BuildMountain.cpp
+              PolarGrid.cpp
+              Meshifier.cpp
               )
 
 set(HDR_FILES MainWindow.hpp
               Viewer.hpp
               Curve.hpp
               BuildMountain.hpp
+              PolarGrid.hpp
+              Meshifier.hpp
               )
 
 set(UI_FILES MainWindow.ui)
