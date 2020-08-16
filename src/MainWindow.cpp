@@ -5,14 +5,26 @@
 
 #include <QCloseEvent>
 #include <QSettings>
+#include <QStandardItemModel>
 
 #include <chrono>
 #include <fstream>
 
 MainWindow::MainWindow(QWidget *parent)
 	: QMainWindow(parent)
-	, d_ui(new Ui::MainWindow) {
+	, d_ui(new Ui::MainWindow)
+	, d_curves(new QStandardItemModel(this)) {
 	d_ui->setupUi(this);
+
+	connect(d_curves,&QStandardItemModel::itemChanged,
+	        this,&MainWindow::onItemChanged);
+
+	d_curveDefinitions["exp"] = Curve::Exp();
+
+	for( const auto & [name,curve] : Curve::AllCurves() ) {
+		d_curveDefinitions[name.c_str()] = curve;
+	}
+
 
 	d_octavesSliders = {d_ui->mOctave1Slider,
 	                    d_ui->mOctave2Slider,
@@ -23,6 +35,8 @@ MainWindow::MainWindow(QWidget *parent)
 	                  d_ui->noise2Label,
 	                  d_ui->noise3Label,
 	                  d_ui->noise4Label };
+
+	d_ui->tableView->setModel(d_curves);
 
 	loadSettings();
 
@@ -52,6 +66,8 @@ MainWindow::MainWindow(QWidget *parent)
 	        this,&MainWindow::update3DLayer);
 
 
+	d_ui->removeButton->setEnabled(false);
+
 
 	updateModelLow();
 }
@@ -69,8 +85,14 @@ void MainWindow::buildModel(size_t gridSize) {
 	MountainOptions opts;
 	opts.GridSize = gridSize;
 
-	opts.Curves = {Curve::Exp(),Curve::Exp(),Curve::Exp()};
-	opts.Angles = {0.0,120.0,240.0};
+	for ( size_t i = 0; i < d_curves->rowCount(); ++i) {
+		auto name = d_curves->item(i,0)->text();
+		auto angle = d_curves->item(i,1)->text().toFloat();
+		if ( d_curveDefinitions.count(name) > 0 ) {
+			opts.Curves.push_back(d_curveDefinitions[name]);
+			opts.Angles.push_back(angle);
+		}
+	}
 
 	for ( const auto & s : d_octavesSliders ) {
 		opts.OctaveWeights.push_back(float(s->value())/float(s->maximum()));
@@ -169,4 +191,59 @@ void MainWindow::updateModelHigh() {
 }
 void MainWindow::updateModelLow() {
 	buildModel(100);
+}
+
+
+QComboBox * MainWindow::curveBox() {
+	auto res = new QComboBox(this);
+	for ( const auto & [name,curve] : d_curveDefinitions ) {
+		res->addItem(name);
+	}
+	return res;
+}
+
+
+void MainWindow::addCurve(const QString & name,
+                          float angle) {
+	auto typeItem = new QStandardItem(name);
+	auto angleItem = new QStandardItem(QString::number(angle));
+	auto spinBox = new QDoubleSpinBox(this);
+	spinBox->setMinimum(0);
+	spinBox->setMaximum(360);
+	spinBox->setSingleStep(5);
+	spinBox->setValue(angle);
+	auto cBox = curveBox();
+	cBox->setCurrentIndex(cBox->findText(name));
+	connect(spinBox,static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
+	        this,[angleItem](double value) {
+		             angleItem->setText(QString::number(value));
+	             });
+
+	connect(cBox,static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+	        this,[typeItem,cBox]() {
+		             typeItem->setText(cBox->currentText());
+	             });
+
+
+	d_curves->insertRow(d_curves->rowCount(),{typeItem,angleItem});
+	d_ui->tableView->setIndexWidget(d_curves->index(d_curves->rowCount()-1,0),cBox);
+	d_ui->tableView->setIndexWidget(d_curves->index(d_curves->rowCount()-1,1),spinBox);
+}
+
+
+void MainWindow::on_addButton_clicked() {
+	float angle = 0.0;
+	if ( d_curves->rowCount() != 0 ) {
+		angle = (360 + d_curves->item(d_curves->rowCount()-1,1)->text().toFloat()) / 2.0;
+	}
+	addCurve("exp",angle);
+	enableBuild();
+}
+
+void MainWindow::on_removeButton_clicked() {
+
+}
+
+void MainWindow::onItemChanged(QStandardItem * item) {
+	enableBuild();
 }

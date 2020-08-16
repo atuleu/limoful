@@ -121,9 +121,14 @@ void RemovePointsBelow0(std::vector<Eigen::Vector3f> & points) {
 }
 
 Mountain BuildMountain(MountainOptions options) {
-	if ( options.Curves.size() < 2 ) {
+	if ( options.Curves.size() == 0 ) {
 		options.Curves = {Curve::Exp(),Curve::Exp()};
 		options.Angles = {0,180.0};
+	}
+
+	if ( options.Curves.size() == 1 ) {
+		options.Curves.push_back(Curve::Exp());
+		options.Angles.push_back(180.0);
 	}
 
 	auto curves = FittedCurves(options);
