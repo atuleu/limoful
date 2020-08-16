@@ -16,6 +16,7 @@ MainWindow::MainWindow(QWidget *parent)
 	, d_curves(new QStandardItemModel(this)) {
 	d_ui->setupUi(this);
 
+
 	connect(d_curves,&QStandardItemModel::itemChanged,
 	        this,&MainWindow::onItemChanged);
 
@@ -35,9 +36,9 @@ MainWindow::MainWindow(QWidget *parent)
 	                  d_ui->noise2Label,
 	                  d_ui->noise3Label,
 	                  d_ui->noise4Label };
-
+	d_curves->setHorizontalHeaderLabels({tr("type"),tr("angle")});
 	d_ui->tableView->setModel(d_curves);
-
+	d_ui->tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 	loadSettings();
 
 	connect(d_ui->mMinSlopeBox,static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
@@ -67,7 +68,6 @@ MainWindow::MainWindow(QWidget *parent)
 
 
 	d_ui->removeButton->setEnabled(false);
-
 
 	updateModelLow();
 }
@@ -100,6 +100,8 @@ void MainWindow::buildModel(size_t gridSize) {
 	opts.Seed = d_ui->mSeedBox->value();
 	opts.SlopeMinAngle = d_ui->mMinSlopeBox->value();
 	opts.SlopeMaxAngle = d_ui->mMaxSlopeBox->value();
+	opts.EdgeJump = -0.1;
+
 
 	using clock = std::chrono::high_resolution_clock;
 	auto start = clock::now();

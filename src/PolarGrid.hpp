@@ -17,7 +17,7 @@ public:
 	}
 
 	static float AngleIncrement(size_t gridSize) {
-		return 2.0 * M_PI / (ActualGridSize(gridSize) - 1);
+		return 2.0 * M_PI / ActualGridSize(gridSize);
 	}
 
 

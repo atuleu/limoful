@@ -30,9 +30,9 @@
        <property name="geometry">
         <rect>
          <x>0</x>
-         <y>0</y>
-         <width>373</width>
-         <height>519</height>
+         <y>-297</y>
+         <width>435</width>
+         <height>642</height>
         </rect>
        </property>
        <property name="layoutDirection">
@@ -86,7 +86,8 @@
               <string>...</string>
              </property>
              <property name="icon">
-              <iconset theme="list-add"/>
+              <iconset theme="list-add">
+               <normaloff>.</normaloff>.</iconset>
              </property>
             </widget>
            </item>
@@ -96,7 +97,8 @@
               <string>...</string>
              </property>
              <property name="icon">
-              <iconset theme="list-remove"/>
+              <iconset theme="list-remove">
+               <normaloff>.</normaloff>.</iconset>
              </property>
             </widget>
            </item>
@@ -114,7 +116,14 @@
             </spacer>
            </item>
            <item row="1" column="0" colspan="3">
-            <widget class="QTableView" name="tableView"/>
+            <widget class="QTableView" name="tableView">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>160</height>
+              </size>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>
@@ -152,14 +161,14 @@
              </property>
             </widget>
            </item>
-           <item row="8" column="0">
+           <item row="9" column="0">
             <widget class="QLabel" name="label_7">
              <property name="text">
               <string>Maximum Slope at Curve:</string>
              </property>
             </widget>
            </item>
-           <item row="8" column="1">
+           <item row="9" column="1">
             <widget class="QDoubleSpinBox" name="mMaxSlopeBox">
              <property name="maximum">
               <double>80.000000000000000</double>
@@ -231,6 +240,29 @@
              </property>
             </widget>
            </item>
+           <item row="10" column="0">
+            <widget class="QLabel" name="label">
+             <property name="text">
+              <string>Jump At Curve:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="10" column="1">
+            <widget class="QDoubleSpinBox" name="mJumpBox">
+             <property name="minimum">
+              <double>-0.200000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>0.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>0.010000000000000</double>
+             </property>
+             <property name="value">
+              <double>-0.050000000000000</double>
+             </property>
+            </widget>
+           </item>
           </layout>
          </widget>
         </item>
@@ -258,6 +290,12 @@
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>450</width>
+        <height>0</height>
+       </size>
       </property>
       <property name="title">
        <string>Generated Noise</string>
@@ -312,8 +350,8 @@
         <widget class="QLabel" name="noise4Label">
          <property name="minimumSize">
           <size>
-           <width>150</width>
-           <height>150</height>
+           <width>120</width>
+           <height>120</height>
           </size>
          </property>
          <property name="text">

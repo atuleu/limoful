@@ -12,11 +12,14 @@
 #include "PolarGrid.hpp"
 #include "Meshifier.hpp"
 
+float rad2deg(float a) { return a * 180.0 / M_PI; }
+
 class FittedCurves {
 public:
 	FittedCurves(const MountainOptions & options)
 		: d_minSlope(M_PI / 180.0 * options.SlopeMinAngle)
-		, d_maxSlope(M_PI / 180.0 * options.SlopeMaxAngle) {
+		, d_maxSlope(M_PI / 180.0 * options.SlopeMaxAngle)
+		, d_jump(options.EdgeJump){
 		if ( d_maxSlope < d_minSlope) {
 			std::swap(d_minSlope,d_maxSlope);
 		}
@@ -25,7 +28,7 @@ public:
 
 		size_t i = 0;
 		for ( const auto & angle : options.Angles ) {
-			float angleExact = std::round(angle * M_PI / ( angleIncrement * 180.0) ) * angleIncrement;
+			float angleExact = std::floor(angle * M_PI / ( angleIncrement * 180.0) ) * angleIncrement;
 			d_curves[angleExact] = options.Curves[i];
 			++i;
 		}
@@ -41,10 +44,16 @@ public:
 
 	std::pair<float,float> MinAndMaxHeight(float length,float angle) {
 		const auto & [ lowCurve,highCurve,lowAngle,highAngle] = FindBoundingCurves(angle);
-		return {std::max(interpolateMin(lowCurve,lowAngle,length,angle),
-		                 interpolateMin(highCurve,highAngle,length,angle)),
-		        std::max(interpolateMax(lowCurve,lowAngle,length,angle),
-		                 interpolateMax(highCurve,highAngle,length,angle))};
+
+
+
+		auto mmin = mix(interpolateMin(lowCurve,lowAngle,length,angle),
+		                interpolateMin(highCurve,highAngle,length,angle));
+
+		auto mmax = mix(interpolateMax(lowCurve,lowAngle,length,angle),
+		                interpolateMax(highCurve,highAngle,length,angle));
+
+		return {mmin,mmax};
 	}
 
 private:
@@ -64,20 +73,37 @@ private:
 		return {&(ffi->second),&(fi->second),ffi->first,fi->first};
 	}
 
-	float interpolateMax(Curve * curve, float angleCurve, float length, float angle) {
-		float distToCurve = std::fabs(angle - angleCurve) * length;
-		return curve->ValueAt(1.0-length) - std::tan(d_minSlope) * distToCurve;
+	std::pair<float,float> interpolateMax(Curve * curve, float angleCurve, float length, float angle) {
+		float distAngle = std::fabs(angle - angleCurve);
+		if ( distAngle > 2*M_PI ) { distAngle -= 2*M_PI; }
+		float distToCurve = distAngle * length;
+		float v = curve->ValueAt(1.0-length);
+
+		return {distToCurve,v - std::tan(d_minSlope) * distToCurve};
 	}
 
-	float interpolateMin(Curve * curve, float angleCurve, float length, float angle) {
-		float distToCurve = std::fabs(angle - angleCurve) * length;
+	std::pair<float,float> interpolateMin(Curve * curve, float angleCurve, float length, float angle) {
+		float distAngle = std::fabs(angle - angleCurve);
+		if ( distAngle > 2*M_PI ) { distAngle -= 2*M_PI; }
+		float distToCurve = distAngle * length;
 		float v = curve->ValueAt(1.0-length);
-		return std::max(v  - std::tan(d_maxSlope) * distToCurve,float(-0.1));
+		if ( distAngle < 1e-6 ) {
+			return {distToCurve,v};
+		}
+		return {distToCurve,std::max(v + d_jump - std::tan(d_maxSlope) * distToCurve,float(-0.1))};
+	}
+
+	float mix(std::pair<float,float> a,
+	          std::pair<float,float> b) {
+
+		float sum = a.first + b.first;
+		auto res =  (a.second * b.first + b.second * a.first) / sum;
+		return res;
 	}
 
 
 	std::map<float,Curve> d_curves;
-	float d_minSlope,d_maxSlope;
+	float d_minSlope,d_maxSlope,d_jump;
 };
 
 
