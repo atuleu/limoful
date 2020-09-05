@@ -76,7 +76,6 @@ MainWindow::MainWindow(QWidget *parent)
 	        this,&MainWindow::update3DLayer);
 
 
-	d_ui->removeButton->setEnabled(false);
 
 	updateModelLow();
 }
@@ -275,7 +274,7 @@ void MainWindow::on_addButton_clicked() {
 }
 
 void MainWindow::on_removeButton_clicked() {
-
+	d_curves->removeRows(d_curves->rowCount()-1,1);
 }
 
 void MainWindow::onItemChanged(QStandardItem * item) {
