@@ -61,7 +61,7 @@ void Viewer::init() {
 	initializeGLFunctions();
 
 	setGridIsDrawn(true);
-	setAxisIsDrawn(true);
+	setAxisIsDrawn(false);
 
 	//glGenVertexArrays(1, &d_vaoID);
 	//glBindVertexArray(d_vaoID);
