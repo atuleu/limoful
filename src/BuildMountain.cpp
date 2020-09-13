@@ -75,28 +75,33 @@ private:
 	}
 
 	std::pair<float,float> interpolateMax(Curve * curve, float angleCurve, float length, float angle) {
-		float distAngle = std::fabs(angle - angleCurve);
-		if ( distAngle > 2*M_PI ) { distAngle -= 2*M_PI; }
-		float distToCurve = distAngle * length;
-		float v = curve->ValueAt(1.0-length);
-
-		return {distToCurve,v - std::tan(d_minSlope) * distToCurve};
+		Eigen::Vector3d p(length * std::cos(angle),length * std::sin(angle),0),
+			r(std::cos(angleCurve),std::sin(angleCurve),0);
+		float distToCurve = std::abs(angle - angleCurve);
+		while ( distToCurve >= 2*M_PI ) { distToCurve -= 2*M_PI; }
+		while ( distToCurve < 0 ) { distToCurve += 2*M_PI; }
+		float d = std::abs(p.dot(r));
+		float v = curve->ValueAt(1.0-d);
+		d /= length;
+		static double maxSlope = 60.0 * M_PI / 180.0;
+		return {distToCurve,v - std::tan(d * (d_minSlope - maxSlope) + maxSlope) * p.cross(r).norm() };
 	}
 
 	std::pair<float,float> interpolateMin(Curve * curve, float angleCurve, float length, float angle) {
-		float distAngle = std::fabs(angle - angleCurve);
-		if ( distAngle > 2*M_PI ) { distAngle -= 2*M_PI; }
-		float distToCurve = distAngle * length;
-		float v = curve->ValueAt(1.0-length);
-		if ( distAngle < 1e-6 ) {
-			return {distToCurve,v};
-		}
-		return {distToCurve,std::max(v + d_jump - std::tan(d_maxSlope) * distToCurve,d_minValue)};
+		Eigen::Vector3d p(length * std::cos(angle),length * std::sin(angle),0),
+			r(std::cos(angleCurve),std::sin(angleCurve),0);
+		float distToCurve = std::abs(angle - angleCurve);
+		while ( distToCurve >= 2*M_PI ) { distToCurve -= 2*M_PI; }
+		while ( distToCurve < 0 ) { distToCurve += 2*M_PI; }
+		float d = std::abs(p.dot(r));
+		float v = curve->ValueAt(1.0-d);
+		d /= length;
+		static double maxSlope = 75.0 * M_PI / 180.0;
+		return {distToCurve,std::max(float(v + d_jump - std::tan(d*(d_maxSlope - maxSlope) + maxSlope) * p.cross(r).norm()),d_minValue)};
 	}
 
 	float mix(std::pair<float,float> a,
 	          std::pair<float,float> b) {
-
 		float sum = a.first + b.first;
 		auto res =  (a.second * b.first + b.second * a.first) / sum;
 		return res;
