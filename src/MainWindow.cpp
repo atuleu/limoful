@@ -20,10 +20,10 @@ MainWindow::MainWindow(QWidget *parent)
 	connect(d_curves,&QStandardItemModel::itemChanged,
 	        this,&MainWindow::onItemChanged);
 
-	d_curveDefinitions["exp"] = Curve::Exp();
+	d_curveDefinitions.insert({"exp",Curve::Exp()});
 
 	for( const auto & [name,curve] : Curve::AllCurves() ) {
-		d_curveDefinitions[name.c_str()] = curve;
+		d_curveDefinitions.insert({name.c_str(),curve});
 	}
 
 
@@ -41,11 +41,19 @@ MainWindow::MainWindow(QWidget *parent)
 	d_ui->tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 	loadSettings();
 
-	connect(d_ui->mMinSlopeBox,static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
+	connect(d_ui->mMinSlopeBot,static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
 	        this,&MainWindow::enableBuild);
 
-	connect(d_ui->mMaxSlopeBox,static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
+	connect(d_ui->mMinSlopeTop,static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
 	        this,&MainWindow::enableBuild);
+
+
+	connect(d_ui->mMaxSlopeTop,static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
+	        this,&MainWindow::enableBuild);
+
+	connect(d_ui->mMaxSlopeBot,static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
+	        this,&MainWindow::enableBuild);
+
 
 	connect(d_ui->mJumpBox,static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
 	        this,&MainWindow::enableBuild);
@@ -106,8 +114,10 @@ void MainWindow::buildModel(size_t gridSize) {
 		opts.OctaveWeights.push_back(float(s->value())/float(s->maximum()));
 	}
 	opts.Seed = d_ui->mSeedBox->value();
-	opts.SlopeMinAngle = d_ui->mMinSlopeBox->value();
-	opts.SlopeMaxAngle = d_ui->mMaxSlopeBox->value();
+	opts.SlopeMinTop = d_ui->mMinSlopeTop->value();
+	opts.SlopeMinBot = d_ui->mMinSlopeBot->value();
+	opts.SlopeMaxTop = d_ui->mMaxSlopeTop->value();
+	opts.SlopeMaxBot = d_ui->mMaxSlopeBot->value();
 	opts.EdgeJump = d_ui->mJumpBox->value();
 	opts.LowMin = d_ui->mLowMinBox->value();
 	opts.BaseCut = d_ui->mCutBox->value();
@@ -142,8 +152,10 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 void MainWindow::saveSettings() {
 	QSettings settings;
 	settings.setValue("gridSize",d_ui->gridSizeBox->value());
-	settings.setValue("m/minSlope",d_ui->mMinSlopeBox->value());
-	settings.setValue("m/maxSlope",d_ui->mMaxSlopeBox->value());
+	settings.setValue("m/minSlopeTop",d_ui->mMinSlopeTop->value());
+	settings.setValue("m/maxSlopeTop",d_ui->mMaxSlopeTop->value());
+	settings.setValue("m/minSlopeBot",d_ui->mMinSlopeBot->value());
+	settings.setValue("m/maxSlopeBot",d_ui->mMaxSlopeBot->value());
 	settings.setValue("m/edgeJump",d_ui->mJumpBox->value());
 	settings.setValue("m/lowMin",d_ui->mLowMinBox->value());
 	settings.setValue("m/cut",d_ui->mCutBox->value());
@@ -165,8 +177,11 @@ void MainWindow::saveSettings() {
 void MainWindow::loadSettings() {
 	QSettings settings;
 	d_ui->gridSizeBox->setValue(settings.value("gridSize",30).toInt());
-	d_ui->mMinSlopeBox->setValue(settings.value("m/minSlope",5.0).toDouble());
-	d_ui->mMaxSlopeBox->setValue(settings.value("m/maxSlope",40.0).toDouble());
+	d_ui->mMinSlopeTop->setValue(settings.value("m/minSlopeTop",70.0).toDouble());
+	d_ui->mMaxSlopeTop->setValue(settings.value("m/maxSlopeTop",20.0).toDouble());
+	d_ui->mMinSlopeBot->setValue(settings.value("m/minSlopeBot",20.0).toDouble());
+	d_ui->mMaxSlopeBot->setValue(settings.value("m/maxSlopeBot",4.0).toDouble());
+
 	d_ui->mJumpBox->setValue(settings.value("m/edgeJump",-0.01).toDouble());
 	d_ui->mLowMinBox->setValue(settings.value("m/lowMin",-0.1).toDouble());
 	d_ui->mCutBox->setValue(settings.value("m/cut",0.002).toDouble());

@@ -17,20 +17,19 @@ float rad2deg(float a) { return a * 180.0 / M_PI; }
 class FittedCurves {
 public:
 	FittedCurves(const MountainOptions & options)
-		: d_minSlope(M_PI / 180.0 * options.SlopeMinAngle)
-		, d_maxSlope(M_PI / 180.0 * options.SlopeMaxAngle)
+		: d_minSlopeTop(M_PI / 180.0 * options.SlopeMinTop)
+		, d_minSlopeBot(M_PI / 180.0 * options.SlopeMinBot)
+		, d_maxSlopeTop(M_PI / 180.0 * options.SlopeMaxTop)
+		, d_maxSlopeBot(M_PI / 180.0 * options.SlopeMaxBot)
 		, d_jump(options.EdgeJump)
 		, d_minValue(options.LowMin) {
-		if ( d_maxSlope < d_minSlope) {
-			std::swap(d_minSlope,d_maxSlope);
-		}
 
 		float angleIncrement = PolarGrid::AngleIncrement(options.GridSize);
 
 		size_t i = 0;
 		for ( const auto & angle : options.Angles ) {
 			float angleExact = std::floor(angle * M_PI / ( angleIncrement * 180.0) ) * angleIncrement;
-			d_curves[angleExact] = options.Curves[i];
+			d_curves.insert({angleExact,options.Curves[i]});
 			++i;
 		}
 
@@ -38,8 +37,8 @@ public:
 		auto firstCurve = d_curves.begin()->second;
 		auto lastAngle = (--d_curves.end())->first;
 		auto lastCurve = (--d_curves.end())->second;
-		d_curves[firstAngle + 2*M_PI] = firstCurve;
-		d_curves[lastAngle - 2*M_PI] = lastCurve;
+		d_curves.insert({firstAngle + 2*M_PI,firstCurve});
+		d_curves.insert({lastAngle - 2*M_PI,lastCurve});
 	}
 
 
@@ -81,10 +80,12 @@ private:
 		while ( distToCurve >= 2*M_PI ) { distToCurve -= 2*M_PI; }
 		while ( distToCurve < 0 ) { distToCurve += 2*M_PI; }
 		float d = std::abs(p.dot(r));
-		float v = curve->ValueAt(1.0-d);
+		float v = 0.0;
+		float dd =std::clamp(2*d,0.0f,1.0f);
+		v = (1-dd) * curve->ValueAt(1.0-d) + dd * curve->FilteredValueAt(1.0-d);
+
 		d /= length;
-		static double maxSlope = 60.0 * M_PI / 180.0;
-		return {distToCurve,v - std::tan(d * (d_minSlope - maxSlope) + maxSlope) * p.cross(r).norm() };
+		return {distToCurve,v - std::tan(std::pow(d,7.0) * (d_maxSlopeBot - d_maxSlopeTop) + d_maxSlopeTop) * p.cross(r).norm() };
 	}
 
 	std::pair<float,float> interpolateMin(Curve * curve, float angleCurve, float length, float angle) {
@@ -94,10 +95,9 @@ private:
 		while ( distToCurve >= 2*M_PI ) { distToCurve -= 2*M_PI; }
 		while ( distToCurve < 0 ) { distToCurve += 2*M_PI; }
 		float d = std::abs(p.dot(r));
-		float v = curve->ValueAt(1.0-d);
+		float v = curve->FilteredValueAt(1.0-d);
 		d /= length;
-		static double maxSlope = 75.0 * M_PI / 180.0;
-		return {distToCurve,std::max(float(v + d_jump - std::tan(d*(d_maxSlope - maxSlope) + maxSlope) * p.cross(r).norm()),d_minValue)};
+		return {distToCurve,std::max(float(v + d_jump - std::tan(std::pow(d,7.0)*(d_minSlopeBot - d_minSlopeTop) + d_minSlopeTop) * p.cross(r).norm()),d_minValue)};
 	}
 
 	float mix(std::pair<float,float> a,
@@ -109,7 +109,7 @@ private:
 
 
 	std::map<float,Curve> d_curves;
-	float d_minSlope,d_maxSlope,d_jump,d_minValue;
+	float d_minSlopeTop,d_minSlopeBot,d_maxSlopeTop,d_maxSlopeBot,d_jump,d_minValue;
 };
 
 

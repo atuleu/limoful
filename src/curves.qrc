@@ -2,5 +2,6 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource>
 	<file>curves.csv</file>
+	<file>curves_smoothed.csv</file>
 </qresource>
 </RCC>

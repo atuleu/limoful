@@ -6,40 +6,58 @@
 #include <QFile>
 #include <QTextStream>
 
+#include <iostream>
+
+
 Curve Curve::Exp() {
-	Curve res;
+	std::vector<std::pair<float,float>> xy;
+
 
 	for ( size_t i = 0; i <= 30; ++i ) {
 		float x = float(i) / 30.0;
-		res.d_data[1.0-x] = std::exp(-2*x);
+		xy.push_back({1.0-x,-2*x});
 	}
-	return res;
+
+	return Curve(xy,xy);
 }
 
 
-float Curve::ValueAt(float x) const {
+float Curve::ValueAt(const std::map<float,float> & data,float x) {
 
-	auto bound = d_data.upper_bound(x);
-	if ( bound == d_data.cend() ) {
-		if ( d_data.empty() ) {
+	auto bound = data.upper_bound(x);
+	if ( bound == data.cend() ) {
+		if ( data.empty() ) {
 			return 0;
 		}
 		return (--bound)->second;
 	}
 
-	if ( bound == d_data.begin() ) {
+	if ( bound == data.begin() ) {
 		return bound->second;
 	}
+
 	float highX = bound->first;
 	float highY = bound->second;
 	--bound;
 	float lowX = bound->first;
 	float lowY = bound->second;
+
 	return (x-lowX) / (highX-lowX) * (highY - lowY) + lowY;
 }
 
+
+float Curve::ValueAt(float x) const {
+	return ValueAt(d_data,x);
+}
+
+
+float Curve::FilteredValueAt(float x) const {
+	return ValueAt(d_filtered,x);
+}
+
+
 std::map<std::string,Curve> Curve::AllCurves() {
-	QFile curvesFile(":curves.csv");
+	QFile curvesFile(":curves_smoothed.csv");
 
 	if ( curvesFile.open(QIODevice::ReadOnly) == false ) {
 		return {};
@@ -72,13 +90,34 @@ std::map<std::string,Curve> Curve::AllCurves() {
 		}
 	}
 
+	std::map<std::string,std::vector<float>> pointsByNames(curvePoints.begin(),curvePoints.end());
+
 	std::map<std::string,Curve> res;
-	for ( const auto & [name,points] : curvePoints ) {
-		Curve c;
-		for ( size_t i = 0; i < points.size() / 2; ++i ) {
-			c.d_data[points[2*i]] = points[2*i+1];
+
+	std::vector<std::pair<float,float>> xy,xySmoothed;
+
+	for ( const auto & [name,points] : pointsByNames ) {
+		if ( QString(name.c_str()).endsWith("-smoothed") == true ) {
+			continue;
 		}
-		res[name] = c;
+		xy.clear();
+		xySmoothed.clear();
+		xy.reserve(points.size()/2);
+		xySmoothed.reserve(points.size()/2);
+		const auto & pointsSmoothed = pointsByNames[name+"-smoothed"];
+		for ( size_t i = 0; i < points.size() / 2; ++i ) {
+			xy.push_back({points[2*i],points[2*i+1]});
+			xySmoothed.push_back({pointsSmoothed[2*i], pointsSmoothed[2*i+1]});
+		}
+		res.insert({name,Curve(xy,xySmoothed)});
 	}
+
 	return res;
+}
+
+
+Curve::Curve(const std::vector<std::pair<float,float>> & xy,
+             const std::vector<std::pair<float,float>> & xySmoothed)
+	: d_data(xy.begin(),xy.end())
+	, d_filtered(xySmoothed.begin(),xySmoothed.end()) {
 }

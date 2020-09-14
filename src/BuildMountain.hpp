@@ -17,7 +17,7 @@ struct MountainOptions {
 	std::vector<Curve> Curves;
 	std::vector<float> Angles;
 
-	float SlopeMinAngle,SlopeMaxAngle,EdgeJump,BaseCut,LowMin;
+	float SlopeMinTop,SlopeMinBot,SlopeMaxTop,SlopeMaxBot,EdgeJump,BaseCut,LowMin;
 
 	size_t GridSize;
 	size_t Seed;
