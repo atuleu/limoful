@@ -6,6 +6,9 @@
 #include <QCloseEvent>
 #include <QSettings>
 #include <QStandardItemModel>
+#include <QFileDialog>
+
+#include <wrap/io_trimesh/export.h>
 
 #include <chrono>
 #include <fstream>
@@ -40,6 +43,10 @@ MainWindow::MainWindow(QWidget *parent)
 	d_ui->tableView->setModel(d_curves);
 	d_ui->tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 	loadSettings();
+
+	connect(d_ui->mSmoothRadiusBox,static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
+	        this,&MainWindow::enableBuild);
+
 
 	connect(d_ui->mMinSlopeBot,static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
 	        this,&MainWindow::enableBuild);
@@ -118,6 +125,7 @@ void MainWindow::buildModel(size_t gridSize) {
 	opts.SlopeMinBot = d_ui->mMinSlopeBot->value();
 	opts.SlopeMaxTop = d_ui->mMaxSlopeTop->value();
 	opts.SlopeMaxBot = d_ui->mMaxSlopeBot->value();
+	opts.SmoothRadius = d_ui->mSmoothRadiusBox->value();
 	opts.EdgeJump = d_ui->mJumpBox->value();
 	opts.LowMin = d_ui->mLowMinBox->value();
 	opts.BaseCut = d_ui->mCutBox->value();
@@ -156,6 +164,7 @@ void MainWindow::saveSettings() {
 	settings.setValue("m/maxSlopeTop",d_ui->mMaxSlopeTop->value());
 	settings.setValue("m/minSlopeBot",d_ui->mMinSlopeBot->value());
 	settings.setValue("m/maxSlopeBot",d_ui->mMaxSlopeBot->value());
+	settings.setValue("m/smoothRadius",d_ui->mSmoothRadiusBox->value());
 	settings.setValue("m/edgeJump",d_ui->mJumpBox->value());
 	settings.setValue("m/lowMin",d_ui->mLowMinBox->value());
 	settings.setValue("m/cut",d_ui->mCutBox->value());
@@ -181,6 +190,7 @@ void MainWindow::loadSettings() {
 	d_ui->mMaxSlopeTop->setValue(settings.value("m/maxSlopeTop",20.0).toDouble());
 	d_ui->mMinSlopeBot->setValue(settings.value("m/minSlopeBot",20.0).toDouble());
 	d_ui->mMaxSlopeBot->setValue(settings.value("m/maxSlopeBot",4.0).toDouble());
+	d_ui->mSmoothRadiusBox->setValue(settings.value("m/smoothRadius",0.1).toDouble());
 
 	d_ui->mJumpBox->setValue(settings.value("m/edgeJump",-0.01).toDouble());
 	d_ui->mLowMinBox->setValue(settings.value("m/lowMin",-0.1).toDouble());
@@ -216,21 +226,13 @@ void MainWindow::update3DLayer() {
 }
 
 void MainWindow::on_actionExport_triggered() {
-	std::cerr << "coucou" << std::endl;
-	std::vector<Eigen::Vector3f> points;
-	points.reserve(2*d_mountain.Points.size() );
+	auto filename = QFileDialog::getSaveFileName(this,"Save as STL file","","STL Files(*.stl)");
 
-	for ( const auto & p : d_mountain.Points) {
-		if ( p.z() < 0.0 ) { continue;}
-		points.push_back(p);
-		//		points.push_back(Eigen::Vector3f(p.x(),p.y(),0));
+	if ( filename.isEmpty() ) {
+		return;
 	}
 
-	std::ofstream file("/tmp/moutain.xyz");
-	file << points.size() << std::endl;
-	for ( const auto & p : points ) {
-		file << p.x() << " " << p.y() << " " << p.z() << std::endl;
-	}
+	vcg::tri::io::ExporterSTL<LIFMesh>::Save(*d_mountain.Mountain,filename.toUtf8().constData());
 }
 
 

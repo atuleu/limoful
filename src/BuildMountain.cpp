@@ -12,6 +12,23 @@
 #include "PolarGrid.hpp"
 #include "Meshifier.hpp"
 
+
+template <typename T> T smooth_step(T x, T e0, T e1) {
+	x = std::clamp((x - e0) / (e1 - e0),T(0.0),T(1.0));
+	return x * x * (3.0-2.0*x);
+}
+
+template <typename T> T smooth_min(T a, T b, T radius) {
+	T r = (b-a) / radius;
+	r = r * r;
+	T cor = 0.0;
+	if ( r < 1.0  ) {
+		cor = 0.0;
+		cor =  radius / 8.0 * std::exp(r/(r-1.0));
+	}
+	return smooth_step(a,b - radius, b + radius) * (b - a) + a - cor;
+}
+
 float rad2deg(float a) { return a * 180.0 / M_PI; }
 
 class FittedCurves {
@@ -22,7 +39,8 @@ public:
 		, d_maxSlopeTop(M_PI / 180.0 * options.SlopeMaxTop)
 		, d_maxSlopeBot(M_PI / 180.0 * options.SlopeMaxBot)
 		, d_jump(options.EdgeJump)
-		, d_minValue(options.LowMin) {
+		, d_minValue(options.LowMin)
+		, d_radius(options.SmoothRadius) {
 
 		float angleIncrement = PolarGrid::AngleIncrement(options.GridSize);
 
@@ -80,12 +98,10 @@ private:
 		while ( distToCurve >= 2*M_PI ) { distToCurve -= 2*M_PI; }
 		while ( distToCurve < 0 ) { distToCurve += 2*M_PI; }
 		float d = std::abs(p.dot(r));
-		float v = 0.0;
-		float dd =std::clamp(2*d,0.0f,1.0f);
-		v = (1-dd) * curve->ValueAt(1.0-d) + dd * curve->FilteredValueAt(1.0-d);
-
+		float v = curve->ValueAt(1.0-d);
+		float ds = p.cross(r).norm();
 		d /= length;
-		return {distToCurve,v - std::tan(std::pow(d,7.0) * (d_maxSlopeBot - d_maxSlopeTop) + d_maxSlopeTop) * p.cross(r).norm() };
+		return {distToCurve,smooth_min(v-std::tan(d_maxSlopeBot) * ds,curve->ValueAt(1.0)-std::tan(d_maxSlopeTop) * ds, d_radius) };
 	}
 
 	std::pair<float,float> interpolateMin(Curve * curve, float angleCurve, float length, float angle) {
@@ -96,20 +112,27 @@ private:
 		while ( distToCurve < 0 ) { distToCurve += 2*M_PI; }
 		float d = std::abs(p.dot(r));
 		float v = curve->FilteredValueAt(1.0-d);
+		float ds = p.cross(r).norm();
 		d /= length;
-		return {distToCurve,std::max(float(v + d_jump - std::tan(std::pow(d,7.0)*(d_minSlopeBot - d_minSlopeTop) + d_minSlopeTop) * p.cross(r).norm()),d_minValue)};
+
+		float vv = smooth_min(v-std::tan(d_minSlopeBot) * ds,curve->ValueAt(1.0)-std::tan(d_minSlopeTop) * ds,d_radius);
+
+		return {distToCurve,std::max(vv + d_jump,d_minValue)};
 	}
 
 	float mix(std::pair<float,float> a,
 	          std::pair<float,float> b) {
-		float sum = a.first + b.first;
-		auto res =  (a.second * b.first + b.second * a.first) / sum;
-		return res;
+		float r = a.first / (a.first + b.first);
+		if ( r < 0.2 ) { return a.second; }
+		if ( r > 0.8 ) { return b.second; }
+		r -= 0.2;
+		r /= 0.6;
+		return r * (b.second - a.second) + a.second;
 	}
 
 
 	std::map<float,Curve> d_curves;
-	float d_minSlopeTop,d_minSlopeBot,d_maxSlopeTop,d_maxSlopeBot,d_jump,d_minValue;
+	float d_minSlopeTop,d_minSlopeBot,d_maxSlopeTop,d_maxSlopeBot,d_jump,d_minValue,d_radius;
 };
 
 
