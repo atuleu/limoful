@@ -15,6 +15,11 @@ Meshifier::Meshifier(const std::vector<Eigen::Vector3f> & points) {
 	typedef CGAL::Delaunay_triangulation_2<K,Tds>                  Delaunay;
 	typedef K::Point_2                                             Point2;
 
+
+	if (points.empty() ) {
+		std::cout << "Oops" << std::endl;
+		return;
+	}
 	std::vector<std::pair<Point2,size_t>> pointDTs;
 	pointDTs.reserve(points.size());
 	size_t i = -1;
@@ -109,6 +114,9 @@ void Meshifier::PopulateBottomFaces(const LIFMesh::Ptr & mesh,
 
 void Meshifier::PopulateSideFaces(const LIFMesh::Ptr & mesh,
                                   size_t bottomPointOffset) {
+	if ( d_boundary.empty() ) {
+		return;
+	}
 	for ( auto bIter = d_boundary.cbegin();
 	      bIter != (d_boundary.cend() - 1);
 	      ++bIter ) {

@@ -108,13 +108,23 @@ void MainWindow::buildModel(size_t gridSize) {
 	MountainOptions opts;
 	opts.GridSize = gridSize;
 
-	for ( size_t i = 0; i < d_curves->rowCount(); ++i) {
-		auto name = d_curves->item(i,0)->text();
-		auto angle = d_curves->item(i,1)->text().toFloat();
-		if ( d_curveDefinitions.count(name) > 0 ) {
-			opts.Curves.push_back(d_curveDefinitions[name]);
-			opts.Angles.push_back(angle);
+	if ( d_curves->rowCount() >= 2 ) {
+
+		for ( size_t i = 0; i < d_curves->rowCount(); ++i) {
+			auto name = d_curves->item(i,0)->text();
+			auto angle = d_curves->item(i,1)->text().toFloat();
+			if ( d_curveDefinitions.count(name) > 0 ) {
+				opts.Curves.push_back(d_curveDefinitions[name]);
+				opts.Angles.push_back(angle);
+			}
 		}
+
+	} else {
+		opts.Curves.push_back(d_curveDefinitions["exp"]);
+		opts.Curves.push_back(d_curveDefinitions["exp"]);
+		opts.Angles.push_back(0.0);
+		opts.Angles.push_back(180.0);
+
 	}
 
 	for ( const auto & s : d_octavesSliders ) {
